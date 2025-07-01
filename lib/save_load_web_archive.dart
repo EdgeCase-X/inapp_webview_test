@@ -1,0 +1,333 @@
+import 'dart:collection' show UnmodifiableListView;
+
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kDebugMode, kIsWeb;
+import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart'
+    show
+        ContextMenu,
+        InAppWebView,
+        InAppWebViewController,
+        InAppWebViewSettings,
+        NavigationActionPolicy,
+        PullToRefreshController,
+        PullToRefreshSettings,
+        URLRequest,
+        UserScript,
+        WebUri;
+import 'package:inapp_webview_test/main.dart' show myDrawer, webViewEnvironment;
+import 'package:path_provider/path_provider.dart'
+    show getExternalStorageDirectory;
+import 'package:url_launcher/url_launcher.dart' show canLaunchUrl, launchUrl;
+
+class SaveLoadWebArchive extends StatefulWidget {
+  const SaveLoadWebArchive({super.key});
+
+  @override
+  State<SaveLoadWebArchive> createState() => _SaveLoadWebArchiveState();
+}
+
+class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
+  final GlobalKey saveWebViewKey = GlobalKey();
+  final GlobalKey loadWebViewKey = GlobalKey();
+
+  InAppWebViewController? saveWebViewController;
+  InAppWebViewController? loadWebViewController;
+  InAppWebViewSettings settings = InAppWebViewSettings(
+    isInspectable: kDebugMode,
+    mediaPlaybackRequiresUserGesture: false,
+    allowsInlineMediaPlayback: true,
+    allowFileAccessFromFileURLs: true,
+    allowFileAccess: true,
+    iframeAllow: "camera; microphone",
+    iframeAllowFullscreen: true,
+  );
+
+  PullToRefreshController? pullToRefreshController;
+
+  // late ContextMenu contextMenu;
+  String url = "";
+  double progress = 0;
+  final urlController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    pullToRefreshController =
+        kIsWeb ||
+                ![
+                  TargetPlatform.iOS,
+                  TargetPlatform.android,
+                ].contains(defaultTargetPlatform)
+            ? null
+            : PullToRefreshController(
+              settings: PullToRefreshSettings(color: Colors.blue),
+              onRefresh: () async {
+                if (defaultTargetPlatform == TargetPlatform.android) {
+                  saveWebViewController?.reload();
+                } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+                  saveWebViewController?.loadUrl(
+                    urlRequest: URLRequest(
+                      url: await saveWebViewController?.getUrl(),
+                    ),
+                  );
+                }
+              },
+            );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("InAppBrowser")),
+      drawer: myDrawer(context: context),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            TextField(
+              decoration: InputDecoration(prefixIcon: Icon(Icons.search)),
+              controller: urlController,
+              keyboardType: TextInputType.text,
+              onSubmitted: (value) {
+                var url = WebUri(value);
+                if (url.scheme.isEmpty) {
+                  url = WebUri(
+                    (!kIsWeb
+                            ? "https://www.google.com/search?q="
+                            : "https://www.bing.com/search?q=") +
+                        value,
+                  );
+                }
+                saveWebViewController?.loadUrl(
+                  urlRequest: URLRequest(url: url),
+                );
+              },
+            ),
+            saveWebView(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: () async {
+                    final directory = await getExternalStorageDirectory();
+                    final filePath = '${directory?.path}/archive2.mht';
+                    final result = await saveWebViewController?.saveWebArchive(
+                      filePath: filePath,
+                      autoname: false,
+                    );
+                    // .then((value) {
+                    //   print("WebView archived to: $filePath");
+                    // })
+                    // .catchError((error) {
+                    //   print("Error archiving WebView: $error");
+                    // });
+
+                    result == null
+                        ? print("ERROR: WebView archived to: $filePath")
+                        : print("ERROR: Error archiving WebView.");
+                  },
+                  child: Text("Archive webView"),
+                ),
+                Container(width: 40),
+                ElevatedButton(
+                  onPressed: () async {
+                    final directory = await getExternalStorageDirectory();
+                    final filePath = directory?.path;
+                    if (filePath != null) {
+                      // Assuming the archive is named "archive.mht"
+                      final archivePath = '$filePath/archive2.mht';
+                      // await loadWebViewController?.loadData(data: data);
+                      // await loadWebViewController?.loadFile(
+                      //   assetFilePath: archivePath,
+                      // );
+                      print("Loaded archive from: $archivePath");
+                    } else {
+                      print(
+                        "ERROR: Could not find external storage directory.",
+                      );
+                    }
+                  },
+                  child: Text("Load webView archive"),
+                ),
+              ],
+            ),
+            loadWebView(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget saveWebView() => Expanded(
+    child: Stack(
+      children: [
+        InAppWebView(
+          key: saveWebViewKey,
+          webViewEnvironment: webViewEnvironment,
+          initialUrlRequest: URLRequest(url: WebUri('https://flutter.dev')),
+          // initialUrlRequest:
+          // URLRequest(url: WebUri(Uri.base.toString().replaceFirst("/#/", "/") + 'page.html')),
+          // initialFile: "assets/index.html",
+          initialUserScripts: UnmodifiableListView<UserScript>([]),
+          initialSettings: settings,
+          // contextMenu: contextMenu,
+          pullToRefreshController: pullToRefreshController,
+          onWebViewCreated: (controller) async {
+            saveWebViewController = controller;
+          },
+          onLoadStart: (controller, url) {
+            setState(() {
+              this.url = url.toString();
+              urlController.text = this.url;
+            });
+          },
+          // onPermissionRequest: (controller, request) {
+          //   return PermissionResponse(
+          //     resources: request.resources,
+          //     action: PermissionResponseAction.GRANT,
+          //   );
+          // },
+          shouldOverrideUrlLoading: (controller, navigationAction) async {
+            var uri = navigationAction.request.url!;
+
+            if (![
+              "http",
+              "https",
+              "file",
+              "chrome",
+              "data",
+              "javascript",
+              "about",
+            ].contains(uri.scheme)) {
+              if (await canLaunchUrl(uri)) {
+                // Launch the App
+                await launchUrl(uri);
+                // and cancel the request
+                return NavigationActionPolicy.CANCEL;
+              }
+            }
+
+            return NavigationActionPolicy.ALLOW;
+          },
+          onLoadStop: (controller, url) {
+            pullToRefreshController?.endRefreshing();
+            setState(() {
+              this.url = url.toString();
+              urlController.text = this.url;
+            });
+          },
+          onReceivedError: (controller, request, error) {
+            pullToRefreshController?.endRefreshing();
+          },
+          onProgressChanged: (controller, progress) {
+            if (progress == 100) {
+              pullToRefreshController?.endRefreshing();
+            }
+            setState(() {
+              this.progress = progress / 100;
+              urlController.text = this.url;
+            });
+          },
+          onUpdateVisitedHistory: (controller, url, isReload) {
+            setState(() {
+              this.url = url.toString();
+              urlController.text = this.url;
+            });
+          },
+          onConsoleMessage: (controller, consoleMessage) {
+            print(consoleMessage);
+          },
+        ),
+        progress < 1.0 ? LinearProgressIndicator(value: progress) : Container(),
+      ],
+    ),
+  );
+
+  Widget loadWebView() => Expanded(
+    child: Stack(
+      children: [
+        InAppWebView(
+          key: loadWebViewKey,
+          webViewEnvironment: webViewEnvironment,
+          // initialFile: ,
+          // initialUrlRequest: URLRequest(url: WebUri('https://flutter.dev')),
+          // initialUrlRequest:
+          // URLRequest(url: WebUri(Uri.base.toString().replaceFirst("/#/", "/") + 'page.html')),
+          // initialFile: "assets/index.html",
+          initialUserScripts: UnmodifiableListView<UserScript>([]),
+          initialSettings: settings,
+          // contextMenu: contextMenu,
+          pullToRefreshController: pullToRefreshController,
+          onWebViewCreated: (controller) async {
+            loadWebViewController = controller;
+          },
+          onLoadStart: (controller, url) {
+            setState(() {
+              this.url = url.toString();
+              urlController.text = this.url;
+            });
+          },
+          // onPermissionRequest: (controller, request) {
+          //   return PermissionResponse(
+          //     resources: request.resources,
+          //     action: PermissionResponseAction.GRANT,
+          //   );
+          // },
+          shouldOverrideUrlLoading: (controller, navigationAction) async {
+            var uri = navigationAction.request.url!;
+
+            if (![
+              "http",
+              "https",
+              "file",
+              "chrome",
+              "data",
+              "javascript",
+              "about",
+            ].contains(uri.scheme)) {
+              if (await canLaunchUrl(uri)) {
+                // Launch the App
+                await launchUrl(uri);
+                // and cancel the request
+                return NavigationActionPolicy.CANCEL;
+              }
+            }
+
+            return NavigationActionPolicy.ALLOW;
+          },
+          onLoadStop: (controller, url) {
+            pullToRefreshController?.endRefreshing();
+            setState(() {
+              this.url = url.toString();
+              urlController.text = this.url;
+            });
+          },
+          onReceivedError: (controller, request, error) {
+            pullToRefreshController?.endRefreshing();
+          },
+          onProgressChanged: (controller, progress) {
+            if (progress == 100) {
+              pullToRefreshController?.endRefreshing();
+            }
+            setState(() {
+              this.progress = progress / 100;
+              urlController.text = this.url;
+            });
+          },
+          onUpdateVisitedHistory: (controller, url, isReload) {
+            setState(() {
+              this.url = url.toString();
+              urlController.text = this.url;
+            });
+          },
+          onConsoleMessage: (controller, consoleMessage) {
+            print(consoleMessage);
+          },
+        ),
+        progress < 1.0 ? LinearProgressIndicator(value: progress) : Container(),
+      ],
+    ),
+  );
+}

@@ -12,6 +12,7 @@ import 'package:inapp_webview_test/example/headless_in_app_webview.screen.dart' 
 import 'package:inapp_webview_test/example/in_app_browser_example.screen.dart' show InAppBrowserExampleScreen;
 import 'package:inapp_webview_test/example/in_app_webiew_example.screen.dart' show InAppWebViewExampleScreen;
 import 'package:inapp_webview_test/example/web_authentication_session_example.screen.dart' show WebAuthenticationSessionExampleScreen;
+import 'package:inapp_webview_test/save_load_web_archive.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart' show PointerInterceptor;
 
 final localhostServer = InAppLocalhostServer(documentRoot: 'assets');
@@ -45,6 +46,12 @@ PointerInterceptor myDrawer({required BuildContext context}) {
       title: Text('InAppWebView'),
       onTap: () {
         Navigator.pushReplacementNamed(context, '/');
+      },
+    ),
+    ListTile(
+      title: Text('SaveLoadWebArchive'),
+      onTap: () {
+        Navigator.pushReplacementNamed(context, '/SaveLoadWebArchive');
       },
     ),
     ListTile(
@@ -218,6 +225,7 @@ class _MyHomePageState extends State<MyHomePage> {
       initialRoute: '/',
       routes: {
         '/': (context) => InAppWebViewExampleScreen(),
+        '/SaveLoadWebArchive': (context) => SaveLoadWebArchive(),
         '/InAppBrowser': (context) => InAppBrowserExampleScreen(),
         '/ChromeSafariBrowser': (context) => ChromeSafariBrowserExampleScreen(),
         '/HeadlessInAppWebView':
