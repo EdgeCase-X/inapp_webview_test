@@ -7,11 +7,6 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart'
         InAppWebViewController,
         WebViewEnvironment,
         WebViewEnvironmentSettings;
-import 'package:inapp_webview_test/example/chrome_safari_browser_example.screen.dart' show ChromeSafariBrowserExampleScreen;
-import 'package:inapp_webview_test/example/headless_in_app_webview.screen.dart' show HeadlessInAppWebViewExampleScreen;
-import 'package:inapp_webview_test/example/in_app_browser_example.screen.dart' show InAppBrowserExampleScreen;
-import 'package:inapp_webview_test/example/in_app_webiew_example.screen.dart' show InAppWebViewExampleScreen;
-import 'package:inapp_webview_test/example/web_authentication_session_example.screen.dart' show WebAuthenticationSessionExampleScreen;
 import 'package:inapp_webview_test/save_load_web_archive.dart';
 import 'package:pointer_interceptor/pointer_interceptor.dart' show PointerInterceptor;
 
@@ -49,7 +44,7 @@ PointerInterceptor myDrawer({required BuildContext context}) {
       },
     ),
   ];
-  
+
   return PointerInterceptor(
     child: Drawer(
       child: ListView(
