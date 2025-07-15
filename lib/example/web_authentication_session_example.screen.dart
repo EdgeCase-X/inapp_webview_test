@@ -4,6 +4,8 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:inapp_webview_test/main.dart' show myDrawer;
 
 class WebAuthenticationSessionExampleScreen extends StatefulWidget {
+  const WebAuthenticationSessionExampleScreen({super.key});
+
   @override
   _WebAuthenticationSessionExampleScreenState createState() =>
       _WebAuthenticationSessionExampleScreenState();

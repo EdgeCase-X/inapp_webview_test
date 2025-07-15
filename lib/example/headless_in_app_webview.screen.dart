@@ -4,6 +4,8 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:inapp_webview_test/main.dart' show myDrawer, webViewEnvironment;
 
 class HeadlessInAppWebViewExampleScreen extends StatefulWidget {
+  const HeadlessInAppWebViewExampleScreen({super.key});
+
   @override
   _HeadlessInAppWebViewExampleScreenState createState() =>
       _HeadlessInAppWebViewExampleScreenState();
@@ -31,7 +33,7 @@ class _HeadlessInAppWebViewExampleScreenState
         print('HeadlessInAppWebView created!');
       },
       onConsoleMessage: (controller, consoleMessage) {
-        print("CONSOLE MESSAGE: " + consoleMessage.message);
+        print("CONSOLE MESSAGE: ${consoleMessage.message}");
       },
       onLoadStart: (controller, url) {
         setState(() {
@@ -68,7 +70,7 @@ class _HeadlessInAppWebViewExampleScreenState
             Container(
               padding: EdgeInsets.all(20.0),
               child: Text(
-                "CURRENT URL\n${(url.length > 50) ? url.substring(0, 50) + "..." : url}",
+                "CURRENT URL\n${(url.length > 50) ? "${url.substring(0, 50)}..." : url}",
               ),
             ),
             Center(
@@ -108,7 +110,7 @@ class _HeadlessInAppWebViewExampleScreenState
                 onPressed: () {
                   headlessWebView?.dispose();
                   setState(() {
-                    this.url = "";
+                    url = "";
                   });
                 },
                 child: Text("Dispose HeadlessInAppWebView"),

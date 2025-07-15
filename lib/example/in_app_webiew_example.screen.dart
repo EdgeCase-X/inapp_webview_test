@@ -7,6 +7,8 @@ import 'package:inapp_webview_test/main.dart' show myDrawer, webViewEnvironment;
 import 'package:url_launcher/url_launcher.dart';
 
 class InAppWebViewExampleScreen extends StatefulWidget {
+  const InAppWebViewExampleScreen({super.key});
+
   @override
   _InAppWebViewExampleScreenState createState() =>
       _InAppWebViewExampleScreenState();
@@ -59,10 +61,7 @@ class _InAppWebViewExampleScreenState extends State<InAppWebViewExampleScreen> {
       onContextMenuActionItemClicked: (contextMenuItemClicked) async {
         var id = contextMenuItemClicked.id;
         print(
-          "onContextMenuActionItemClicked: " +
-              id.toString() +
-              " " +
-              contextMenuItemClicked.title,
+          "onContextMenuActionItemClicked: $id ${contextMenuItemClicked.title}",
         );
       },
     );
@@ -192,7 +191,7 @@ class _InAppWebViewExampleScreenState extends State<InAppWebViewExampleScreen> {
                       }
                       setState(() {
                         this.progress = progress / 100;
-                        urlController.text = this.url;
+                        urlController.text = url;
                       });
                     },
                     onUpdateVisitedHistory: (controller, url, isReload) {
@@ -211,7 +210,7 @@ class _InAppWebViewExampleScreenState extends State<InAppWebViewExampleScreen> {
                 ],
               ),
             ),
-            ButtonBar(
+            OverflowBar(
               alignment: MainAxisAlignment.center,
               children: <Widget>[
                 ElevatedButton(

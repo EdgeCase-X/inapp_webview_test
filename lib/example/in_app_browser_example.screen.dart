@@ -1,4 +1,3 @@
-import 'dart:collection';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -9,13 +8,10 @@ import '../main.dart' show myDrawer, webViewEnvironment;
 
 class MyInAppBrowser extends InAppBrowser {
   MyInAppBrowser({
-    int? windowId,
-    UnmodifiableListView<UserScript>? initialUserScripts,
-    PullToRefreshController? pullToRefreshController,
+    super.windowId,
+    super.initialUserScripts,
+    super.pullToRefreshController,
   }) : super(
-         windowId: windowId,
-         initialUserScripts: initialUserScripts,
-         pullToRefreshController: pullToRefreshController,
          webViewEnvironment: webViewEnvironment,
        );
 
@@ -63,12 +59,15 @@ class MyInAppBrowser extends InAppBrowser {
   //   return NavigationActionPolicy.ALLOW;
   // }
 
+  @override
   void onMainWindowWillClose() {
     close();
   }
 }
 
 class InAppBrowserExampleScreen extends StatefulWidget {
+  const InAppBrowserExampleScreen({super.key});
+
   @override
   _InAppBrowserExampleScreenState createState() =>
       _InAppBrowserExampleScreenState();

@@ -24,6 +24,8 @@ class MyChromeSafariBrowser extends ChromeSafariBrowser {
 class ChromeSafariBrowserExampleScreen extends StatefulWidget {
   final ChromeSafariBrowser browser = MyChromeSafariBrowser();
 
+  ChromeSafariBrowserExampleScreen({super.key});
+
   @override
   _ChromeSafariBrowserExampleScreenState createState() =>
       _ChromeSafariBrowserExampleScreenState();
