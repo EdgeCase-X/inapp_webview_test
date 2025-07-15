@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart'
     show
-        ContextMenu,
         InAppWebView,
         InAppWebViewController,
         InAppWebViewSettings,
@@ -16,8 +15,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart'
         UserScript,
         WebUri;
 import 'package:inapp_webview_test/main.dart' show myDrawer, webViewEnvironment;
-import 'package:path_provider/path_provider.dart'
-    show getExternalStorageDirectory;
+import 'package:inapp_webview_test/web_archive_manager.dart';
 import 'package:url_launcher/url_launcher.dart' show canLaunchUrl, launchUrl;
 
 class SaveLoadWebArchive extends StatefulWidget {
@@ -45,10 +43,11 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
 
   PullToRefreshController? pullToRefreshController;
 
-  // late ContextMenu contextMenu;
   String url = "";
   double progress = 0;
   final urlController = TextEditingController();
+
+  static const String archiveFileName = 'archive2.mht';
 
   @override
   void initState() {
@@ -106,52 +105,54 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
               },
             ),
             saveWebView(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () async {
-                    final directory = await getExternalStorageDirectory();
-                    final filePath = '${directory?.path}/archive2.mht';
-                    final result = await saveWebViewController?.saveWebArchive(
-                      filePath: filePath,
-                      autoname: false,
-                    );
-                    // .then((value) {
-                    //   print("WebView archived to: $filePath");
-                    // })
-                    // .catchError((error) {
-                    //   print("Error archiving WebView: $error");
-                    // });
-
-                    result == null
-                        ? print("ERROR: WebView archived to: $filePath")
-                        : print("ERROR: Error archiving WebView.");
-                  },
-                  child: Text("Archive webView"),
-                ),
-                Container(width: 40),
-                ElevatedButton(
-                  onPressed: () async {
-                    final directory = await getExternalStorageDirectory();
-                    final filePath = directory?.path;
-                    if (filePath != null) {
-                      // Assuming the archive is named "archive.mht"
-                      final archivePath = '$filePath/archive2.mht';
-                      // await loadWebViewController?.loadData(data: data);
-                      // await loadWebViewController?.loadFile(
-                      //   assetFilePath: archivePath,
-                      // );
-                      print("Loaded archive from: $archivePath");
-                    } else {
-                      print(
-                        "ERROR: Could not find external storage directory.",
+            Expanded(
+              flex: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () async {
+                      final success = await WebArchiveManager.saveWebArchive(
+                        saveWebViewController,
+                        archiveFileName,
                       );
-                    }
-                  },
-                  child: Text("Load webView archive"),
-                ),
-              ],
+                      if (success) {
+                        print("WebView archived to: $archiveFileName");
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Archive saved!')),
+                        );
+                      } else {
+                        print("ERROR: Error archiving WebView.");
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to save archive!')),
+                        );
+                      }
+                    },
+                    child: Text("Archive"),
+                  ),
+                  SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final success = await WebArchiveManager.loadWebArchive(
+                        loadWebViewController,
+                        archiveFileName,
+                      );
+                      if (success) {
+                        print("Loaded archive from: $archiveFileName");
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Archive loaded!')),
+                        );
+                      } else {
+                        print("ERROR: Could not load archive.");
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to load archive!')),
+                        );
+                      }
+                    },
+                    child: Text("Load archive"),
+                  ),
+                ],
+              ),
             ),
             loadWebView(),
           ],
@@ -167,12 +168,8 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
           key: saveWebViewKey,
           webViewEnvironment: webViewEnvironment,
           initialUrlRequest: URLRequest(url: WebUri('https://flutter.dev')),
-          // initialUrlRequest:
-          // URLRequest(url: WebUri(Uri.base.toString().replaceFirst("/#/", "/") + 'page.html')),
-          // initialFile: "assets/index.html",
           initialUserScripts: UnmodifiableListView<UserScript>([]),
           initialSettings: settings,
-          // contextMenu: contextMenu,
           pullToRefreshController: pullToRefreshController,
           onWebViewCreated: (controller) async {
             saveWebViewController = controller;
@@ -183,12 +180,6 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
               urlController.text = this.url;
             });
           },
-          // onPermissionRequest: (controller, request) {
-          //   return PermissionResponse(
-          //     resources: request.resources,
-          //     action: PermissionResponseAction.GRANT,
-          //   );
-          // },
           shouldOverrideUrlLoading: (controller, navigationAction) async {
             var uri = navigationAction.request.url!;
 
@@ -202,9 +193,7 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
               "about",
             ].contains(uri.scheme)) {
               if (await canLaunchUrl(uri)) {
-                // Launch the App
                 await launchUrl(uri);
-                // and cancel the request
                 return NavigationActionPolicy.CANCEL;
               }
             }
@@ -227,7 +216,7 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
             }
             setState(() {
               this.progress = progress / 100;
-              urlController.text = this.url;
+              urlController.text = url;
             });
           },
           onUpdateVisitedHistory: (controller, url, isReload) {
@@ -251,14 +240,8 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
         InAppWebView(
           key: loadWebViewKey,
           webViewEnvironment: webViewEnvironment,
-          // initialFile: ,
-          // initialUrlRequest: URLRequest(url: WebUri('https://flutter.dev')),
-          // initialUrlRequest:
-          // URLRequest(url: WebUri(Uri.base.toString().replaceFirst("/#/", "/") + 'page.html')),
-          // initialFile: "assets/index.html",
           initialUserScripts: UnmodifiableListView<UserScript>([]),
           initialSettings: settings,
-          // contextMenu: contextMenu,
           pullToRefreshController: pullToRefreshController,
           onWebViewCreated: (controller) async {
             loadWebViewController = controller;
@@ -269,12 +252,6 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
               urlController.text = this.url;
             });
           },
-          // onPermissionRequest: (controller, request) {
-          //   return PermissionResponse(
-          //     resources: request.resources,
-          //     action: PermissionResponseAction.GRANT,
-          //   );
-          // },
           shouldOverrideUrlLoading: (controller, navigationAction) async {
             var uri = navigationAction.request.url!;
 
@@ -288,9 +265,7 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
               "about",
             ].contains(uri.scheme)) {
               if (await canLaunchUrl(uri)) {
-                // Launch the App
                 await launchUrl(uri);
-                // and cancel the request
                 return NavigationActionPolicy.CANCEL;
               }
             }
@@ -313,7 +288,7 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
             }
             setState(() {
               this.progress = progress / 100;
-              urlController.text = this.url;
+              urlController.text = url;
             });
           },
           onUpdateVisitedHistory: (controller, url, isReload) {
