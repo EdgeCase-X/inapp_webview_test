@@ -9,6 +9,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.12.0"
+  auto_validate:
+    dependency: "direct main"
+    description:
+      name: auto_validate
+      sha256: "2c96f85a31e607ff543426ea33422df620cdc885e200d536b7cc38f063009c48"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.8"
   boolean_selector:
     dependency: transitive
     description:
