@@ -1,5 +1,6 @@
 import 'dart:collection' show UnmodifiableListView;
 
+import 'package:auto_validate/auto_validate.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
@@ -26,10 +27,10 @@ class SaveLoadWebArchive extends StatefulWidget {
 }
 
 class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
-  final GlobalKey saveWebViewKey = GlobalKey();
+  final GlobalKey mainWebViewKey = GlobalKey();
   final GlobalKey loadWebViewKey = GlobalKey();
 
-  InAppWebViewController? saveWebViewController;
+  InAppWebViewController? mainWebViewController;
   InAppWebViewController? loadWebViewController;
   InAppWebViewSettings settings = InAppWebViewSettings(
     isInspectable: kDebugMode,
@@ -46,12 +47,16 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
   String url = "";
   double progress = 0;
   final urlController = TextEditingController();
-
-  static const String archiveFileName = 'archive2.mht';
+  final FocusNode urlFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
+
+    // Set focus to the TextField on start
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      urlFocusNode.requestFocus();
+    });
 
     pullToRefreshController =
         kIsWeb ||
@@ -64,11 +69,11 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
               settings: PullToRefreshSettings(color: Colors.blue),
               onRefresh: () async {
                 if (defaultTargetPlatform == TargetPlatform.android) {
-                  saveWebViewController?.reload();
+                  mainWebViewController?.reload();
                 } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-                  saveWebViewController?.loadUrl(
+                  mainWebViewController?.loadUrl(
                     urlRequest: URLRequest(
-                      url: await saveWebViewController?.getUrl(),
+                      url: await mainWebViewController?.getUrl(),
                     ),
                   );
                 }
@@ -88,91 +93,138 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
             TextField(
               decoration: InputDecoration(prefixIcon: Icon(Icons.search)),
               controller: urlController,
-              keyboardType: TextInputType.text,
-              onSubmitted: (value) {
-                var url = WebUri(value);
-                if (url.scheme.isEmpty) {
-                  url = WebUri(
-                    (!kIsWeb
-                            ? "https://www.google.com/search?q="
-                            : "https://www.bing.com/search?q=") +
-                        value,
+              focusNode: urlFocusNode,
+              keyboardType: TextInputType.url,
+              onSubmitted: (value) async {
+                if (value.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Please enter a URL or search query'),
+                    ),
                   );
+                  return;
                 }
-                saveWebViewController?.loadUrl(
-                  urlRequest: URLRequest(url: url),
+
+                // Regex: starts with http://, https://, or www.
+                final urlPattern = RegExp(
+                  r'^(https?://|www\.)',
+                  caseSensitive: false,
                 );
+                final revisedUrl =
+                    urlPattern.hasMatch(value) ? value : 'http://www.$value';
+                final isValidURL = revisedUrl.isValidURL;
+
+                setState(() {
+                  this.url =
+                      isValidURL
+                          ? revisedUrl
+                          : 'https://www.google.com/search?q=$value';
+                  urlController.text = this.url;
+                });
+
+                final urlForRequest = WebUri(url);
+                mainWebViewController?.loadUrl(
+                  urlRequest: URLRequest(url: urlForRequest),
+                );
+
+                if (isValidURL) {
+                  final archiveFileName =
+                      '${urlForRequest.host}_${DateTime.now().millisecondsSinceEpoch}_archive.mht';
+                  // Archive the web page
+                  await _archive(context, archiveFileName);
+                }
               },
             ),
-            saveWebView(),
-            Expanded(
-              flex: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: () async {
-                      final success = await WebArchiveManager.saveWebArchive(
-                        saveWebViewController,
-                        archiveFileName,
-                      );
-                      if (success) {
-                        print("WebView archived to: $archiveFileName");
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Archive saved!')),
-                        );
-                      } else {
-                        print("ERROR: Error archiving WebView.");
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to save archive!')),
-                        );
-                      }
-                    },
-                    child: Text("Archive"),
-                  ),
-                  SizedBox(width: 10),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final success = await WebArchiveManager.loadWebArchive(
-                        loadWebViewController,
-                        archiveFileName,
-                      );
-                      if (success) {
-                        print("Loaded archive from: $archiveFileName");
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Archive loaded!')),
-                        );
-                      } else {
-                        print("ERROR: Could not load archive.");
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to load archive!')),
-                        );
-                      }
-                    },
-                    child: Text("Load archive"),
-                  ),
-                ],
-              ),
-            ),
-            loadWebView(),
+            mainWebView(),
+            // Expanded(
+            //   flex: 0,
+            //   child: Row(
+            //     mainAxisAlignment: MainAxisAlignment.center,
+            //     children: [
+            //       ElevatedButton(
+            //         onPressed: () async {
+            //           final success = await WebArchiveManager.saveWebArchive(
+            //             saveWebViewController,
+            //             archiveFileName,
+            //           );
+            //           if (success) {
+            //             print("WebView archived to: $archiveFileName");
+            //             ScaffoldMessenger.of(context).showSnackBar(
+            //               SnackBar(content: Text('Archive saved!')),
+            //             );
+            //           } else {
+            //             print("ERROR: Error archiving WebView.");
+            //             ScaffoldMessenger.of(context).showSnackBar(
+            //               SnackBar(content: Text('Failed to save archive!')),
+            //             );
+            //           }
+            //         },
+            //         child: Text("Archive"),
+            //       ),
+            //       SizedBox(width: 10),
+            //       ElevatedButton(
+            //         onPressed: () async {
+            //           final success = await WebArchiveManager.loadWebArchive(
+            //             loadWebViewController,
+            //             archiveFileName,
+            //           );
+            //           if (success) {
+            //             print("Loaded archive from: $archiveFileName");
+            //             ScaffoldMessenger.of(context).showSnackBar(
+            //               SnackBar(content: Text('Archive loaded!')),
+            //             );
+            //           } else {
+            //             print("ERROR: Could not load archive.");
+            //             ScaffoldMessenger.of(context).showSnackBar(
+            //               SnackBar(content: Text('Failed to load archive!')),
+            //             );
+            //           }
+            //         },
+            //         child: Text("Load archive"),
+            //       ),
+            //     ],
+            //   ),
+            // ),
+            // loadWebView(),
           ],
         ),
       ),
     );
   }
 
-  Widget saveWebView() => Expanded(
+  Future<void> _archive(BuildContext context, String fileName) async {
+    final success = await WebArchiveManager.saveWebArchive(
+      mainWebViewController,
+      fileName,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      print("WebView archived to: $fileName");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Archive saved!')));
+    } else {
+      print("ERROR: Error archiving WebView.");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save archive!')));
+    }
+  }
+
+  Widget mainWebView() => Expanded(
     child: Stack(
       children: [
         InAppWebView(
-          key: saveWebViewKey,
+          key: mainWebViewKey,
           webViewEnvironment: webViewEnvironment,
-          initialUrlRequest: URLRequest(url: WebUri('https://flutter.dev')),
+          // initialUrlRequest: URLRequest(url: WebUri('https://flutter.dev')),
           initialUserScripts: UnmodifiableListView<UserScript>([]),
           initialSettings: settings,
           pullToRefreshController: pullToRefreshController,
           onWebViewCreated: (controller) async {
-            saveWebViewController = controller;
+            mainWebViewController = controller;
           },
           onLoadStart: (controller, url) {
             setState(() {
