@@ -33,9 +33,11 @@ class WebArchiveManager {
     final file = File(filePath);
     if (!file.existsSync()) return false;
     final data = await file.readAsString();
+    print('Loading web archive from: $filePath');
+    print(data);
     await controller.loadData(
       data: data,
-      mimeType: 'multipart/related', // for .mht/.webarchive files
+      mimeType: 'text/html',//'multipart/related', // for .mht/.webarchive files
       encoding: 'utf-8',
       baseUrl: WebUri('file://$filePath'),
     );

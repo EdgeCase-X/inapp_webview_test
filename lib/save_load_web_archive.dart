@@ -15,6 +15,8 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart'
         URLRequest,
         UserScript,
         WebUri;
+import 'package:inapp_webview_test/load_web_archive_page.dart'
+    show LoadWebArchivePage;
 import 'package:inapp_webview_test/main.dart' show myDrawer, webViewEnvironment;
 import 'package:inapp_webview_test/web_archive_manager.dart';
 import 'package:url_launcher/url_launcher.dart' show canLaunchUrl, launchUrl;
@@ -44,6 +46,7 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
 
   PullToRefreshController? pullToRefreshController;
 
+  String archiveFileName = "";
   String url = "";
   double progress = 0;
   final urlController = TextEditingController();
@@ -84,7 +87,27 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("InAppBrowser")),
+      appBar: AppBar(
+        title: Text("InAppBrowser"),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.archive),
+            tooltip: 'View Archived Content',
+            onPressed: () {
+              final urlForRequest = WebUri(url);
+              // archiveFileName =
+              //     '${urlForRequest.host}_${DateTime.now().millisecondsSinceEpoch}_archive.mht';
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder:
+                      (context) =>
+                          LoadWebArchivePage(archiveFileName: archiveFileName),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       drawer: myDrawer(context: context),
       body: Center(
         child: Column(
@@ -128,7 +151,7 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
                 );
 
                 if (isValidURL) {
-                  final archiveFileName =
+                  archiveFileName =
                       '${urlForRequest.host}_${DateTime.now().millisecondsSinceEpoch}_archive.mht';
                   // Archive the web page
                   await _archive(context, archiveFileName);
