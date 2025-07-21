@@ -35,12 +35,15 @@ class WebArchiveManager {
     final data = await file.readAsString();
     print('Loading web archive from: $filePath');
     print(data);
-    await controller.loadData(
-      data: data,
-      mimeType: 'text/html',//'multipart/related', // for .mht/.webarchive files
-      encoding: 'utf-8',
-      baseUrl: WebUri('file://$filePath'),
+    await controller.loadUrl(
+      urlRequest: URLRequest(url: WebUri('file://$filePath')),
     );
+    // .loadData(
+    //   data: data,
+    //   mimeType: 'text/html',//'multipart/related', // for .mht/.webarchive files
+    //   encoding: 'utf-8',
+    //   baseUrl: WebUri('file://$filePath'),
+    // );
     return true;
   }
 }

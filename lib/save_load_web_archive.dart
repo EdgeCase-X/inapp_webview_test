@@ -146,7 +146,7 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
                 });
 
                 final urlForRequest = WebUri(url);
-                mainWebViewController?.loadUrl(
+                await mainWebViewController?.loadUrl(
                   urlRequest: URLRequest(url: urlForRequest),
                 );
 
