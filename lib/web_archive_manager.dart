@@ -11,13 +11,17 @@ class WebArchiveManager {
     String fileName,
   ) async {
     if (controller == null) return false;
+
     final directory = await getExternalStorageDirectory();
     if (directory == null) return false;
+
     final filePath = '${directory.path}/$fileName';
+    
     final result = await controller.saveWebArchive(
       filePath: filePath,
       autoname: false,
     );
+
     return result != null && File(filePath).existsSync();
   }
 
@@ -27,23 +31,18 @@ class WebArchiveManager {
     String fileName,
   ) async {
     if (controller == null) return false;
+
     final directory = await getExternalStorageDirectory();
     if (directory == null) return false;
+
     final filePath = '${directory.path}/$fileName';
     final file = File(filePath);
     if (!file.existsSync()) return false;
-    final data = await file.readAsString();
-    print('Loading web archive from: $filePath');
-    print(data);
+    
     await controller.loadUrl(
       urlRequest: URLRequest(url: WebUri('file://$filePath')),
     );
-    // .loadData(
-    //   data: data,
-    //   mimeType: 'text/html',//'multipart/related', // for .mht/.webarchive files
-    //   encoding: 'utf-8',
-    //   baseUrl: WebUri('file://$filePath'),
-    // );
+    
     return true;
   }
 }
