@@ -36,8 +36,7 @@ class _LoadWebArchivePageState extends State<LoadWebArchivePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text("Archived WebView")),
-      body: Expanded(
-        child: Stack(
+      body: Stack(
           children: [
             InAppWebView(
               key: loadWebViewKey,
@@ -99,7 +98,6 @@ class _LoadWebArchivePageState extends State<LoadWebArchivePage> {
                 ? LinearProgressIndicator(value: progress)
                 : Container(),
           ],
-        ),
       ),
     );
   }
