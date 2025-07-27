@@ -28,7 +28,6 @@ class _InAppWebViewExampleScreenState extends State<InAppWebViewExampleScreen> {
 
   PullToRefreshController? pullToRefreshController;
 
-  late ContextMenu contextMenu;
   String url = "";
   double progress = 0;
   final urlController = TextEditingController();
@@ -37,56 +36,18 @@ class _InAppWebViewExampleScreenState extends State<InAppWebViewExampleScreen> {
   void initState() {
     super.initState();
 
-    contextMenu = ContextMenu(
-      menuItems: [
-        ContextMenuItem(
-          id: 1,
-          title: "Special",
-          action: () async {
-            print("Menu item Special clicked!");
-            print(await webViewController?.getSelectedText());
-            await webViewController?.clearFocus();
-          },
-        ),
-      ],
-      settings: ContextMenuSettings(hideDefaultSystemContextMenuItems: false),
-      onCreateContextMenu: (hitTestResult) async {
-        print("onCreateContextMenu");
-        print(hitTestResult.extra);
-        print(await webViewController?.getSelectedText());
-      },
-      onHideContextMenu: () {
-        print("onHideContextMenu");
-      },
-      onContextMenuActionItemClicked: (contextMenuItemClicked) async {
-        var id = contextMenuItemClicked.id;
-        print(
-          "onContextMenuActionItemClicked: $id ${contextMenuItemClicked.title}",
-        );
+    pullToRefreshController = PullToRefreshController(
+      settings: PullToRefreshSettings(color: Colors.blue),
+      onRefresh: () async {
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          webViewController?.reload();
+        } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+          webViewController?.loadUrl(
+            urlRequest: URLRequest(url: await webViewController?.getUrl()),
+          );
+        }
       },
     );
-
-    pullToRefreshController =
-        kIsWeb ||
-                ![
-                  TargetPlatform.iOS,
-                  TargetPlatform.android,
-                ].contains(defaultTargetPlatform)
-            ? null
-            : PullToRefreshController(
-              settings: PullToRefreshSettings(color: Colors.blue),
-              onRefresh: () async {
-                if (defaultTargetPlatform == TargetPlatform.android) {
-                  webViewController?.reload();
-                } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-                  webViewController?.loadUrl(
-                    urlRequest: URLRequest(
-                      url: await webViewController?.getUrl(),
-                    ),
-                  );
-                }
-              },
-            );
   }
 
   @override
@@ -109,12 +70,7 @@ class _InAppWebViewExampleScreenState extends State<InAppWebViewExampleScreen> {
               onSubmitted: (value) {
                 var url = WebUri(value);
                 if (url.scheme.isEmpty) {
-                  url = WebUri(
-                    (!kIsWeb
-                            ? "https://www.google.com/search?q="
-                            : "https://www.bing.com/search?q=") +
-                        value,
-                  );
+                  url = WebUri(value);
                 }
                 webViewController?.loadUrl(urlRequest: URLRequest(url: url));
               },
@@ -133,7 +89,6 @@ class _InAppWebViewExampleScreenState extends State<InAppWebViewExampleScreen> {
                     // initialFile: "assets/index.html",
                     initialUserScripts: UnmodifiableListView<UserScript>([]),
                     initialSettings: settings,
-                    contextMenu: contextMenu,
                     pullToRefreshController: pullToRefreshController,
                     onWebViewCreated: (controller) async {
                       webViewController = controller;
