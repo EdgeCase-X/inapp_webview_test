@@ -4,6 +4,8 @@ import 'package:auto_validate/auto_validate.dart';
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart'
     show
         InAppWebView,
@@ -28,7 +30,8 @@ class SaveLoadWebArchive extends StatefulWidget {
   State<SaveLoadWebArchive> createState() => _SaveLoadWebArchiveState();
 }
 
-class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
+class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
+    with SingleTickerProviderStateMixin {
   final GlobalKey mainWebViewKey = GlobalKey();
   final GlobalKey loadWebViewKey = GlobalKey();
 
@@ -51,16 +54,16 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
   double progress = 0;
   final urlController = TextEditingController();
   final FocusNode urlFocusNode = FocusNode();
+  late TabController _tabController;
+  List<FileSystemEntity> _mhtFiles = [];
 
   @override
   void initState() {
     super.initState();
-
     // Set focus to the TextField on start
     WidgetsBinding.instance.addPostFrameCallback((_) {
       urlFocusNode.requestFocus();
     });
-
     pullToRefreshController =
         kIsWeb ||
                 ![
@@ -82,6 +85,25 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
                 }
               },
             );
+    _tabController = TabController(length: 2, vsync: this);
+    _loadMhtFiles();
+  }
+
+  Future<void> _loadMhtFiles() async {
+    final dir = await getExternalStorageDirectory();
+    if (dir != null) {
+      final files =
+          dir.listSync().where((f) => f.path.endsWith('.mht')).toList();
+      setState(() {
+        _mhtFiles = files;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -89,30 +111,23 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
     return Scaffold(
       appBar: AppBar(
         title: Text("InAppBrowser"),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.archive),
-            tooltip: 'View Archived Content',
-            onPressed: () {
-              final urlForRequest = WebUri(url);
-              // archiveFileName =
-              //     '${urlForRequest.host}_${DateTime.now().millisecondsSinceEpoch}_archive.mht';
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder:
-                      (context) =>
-                          LoadWebArchivePage(archiveFileName: archiveFileName),
-                ),
-              );
-            },
-          ),
-        ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [
+            Tab(icon: Icon(Icons.web), text: 'WebView'),
+            Tab(icon: Icon(Icons.grid_view), text: 'Archives'),
+          ],
+        ),
       ),
       drawer: myDrawer(context: context),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          // WebView tab
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
             TextField(
               decoration: InputDecoration(prefixIcon: Icon(Icons.search)),
               controller: urlController,
@@ -211,6 +226,50 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive> {
             // loadWebView(),
           ],
         ),
+      ),
+          // Archives tab
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child:
+                _mhtFiles.isEmpty
+                    ? Center(child: Text('No archives found.'))
+                    : GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 3,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                      ),
+                      itemCount: _mhtFiles.length,
+                      itemBuilder: (context, index) {
+                        final file = _mhtFiles[index];
+                        final fileName =
+                            file.path.split(Platform.pathSeparator).last;
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => LoadWebArchivePage(
+                                      archiveFileName: fileName,
+                                    ),
+                              ),
+                            );
+                          },
+                          child: Card(
+                            child: Center(
+                              child: Text(
+                                fileName,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 14),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+          ),
+        ],
       ),
     );
   }
