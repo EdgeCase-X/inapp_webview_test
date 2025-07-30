@@ -39,6 +39,7 @@ dependencies:
   url_launcher: ^6.3.1
   path_provider: ^2.1.5
   auto_validate: ^3.0.8
+  logger: ^2.6.1
 
 dev_dependencies:
   flutter_test:
