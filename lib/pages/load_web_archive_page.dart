@@ -1,7 +1,7 @@
 import 'dart:collection' show UnmodifiableListView;
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import '../main.dart' show webViewEnvironment;
+import '../main.dart' show logger, webViewEnvironment;
 import 'package:url_launcher/url_launcher.dart' show canLaunchUrl, launchUrl;
 import '../tools/web_archive_manager.dart';
 
@@ -91,7 +91,7 @@ class _LoadWebArchivePageState extends State<LoadWebArchivePage> {
                 });
               },
               onConsoleMessage: (controller, consoleMessage) {
-                print(consoleMessage);
+              logger.d(consoleMessage);
               },
             ),
             progress < 1.0

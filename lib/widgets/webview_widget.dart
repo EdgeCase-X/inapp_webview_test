@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../main.dart' show webViewEnvironment;
+import '../main.dart' show logger, webViewEnvironment;
 
 class WebViewWidget extends StatelessWidget {
   final GlobalKey webViewKey;
@@ -83,7 +83,7 @@ class WebViewWidget extends StatelessWidget {
               urlController.text = url.toString();
             },
             onConsoleMessage: (controller, consoleMessage) {
-              print(consoleMessage);
+              logger.d(consoleMessage);
             },
           ),
           progress < 1.0

@@ -4,6 +4,8 @@ import 'package:auto_validate/auto_validate.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:inapp_webview_test/main.dart' show logger;
 import 'package:path_provider/path_provider.dart';
 
 import '../tools/web_archive_manager.dart';
@@ -177,15 +179,11 @@ class _MainPageState extends State<MainPage>
     if (!mounted) return;
 
     if (success) {
-      print("WebView archived to: $fileName");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Archive saved!')));
+      logger.d("WebView archived to: $fileName");
+      Fluttertoast.showToast(msg: 'Archive saved!');
     } else {
-      print("ERROR: Error archiving WebView.");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to save archive!')));
+      logger.e("ERROR: Error archiving WebView.");
+      Fluttertoast.showToast(msg: 'Failed to save archive!');
     }
   }
 }
