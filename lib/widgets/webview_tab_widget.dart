@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
-class WebViewTabColumn extends StatelessWidget {
+class WebViewTabWidget extends StatelessWidget {
   final TextEditingController urlController;
   final FocusNode urlFocusNode;
   final InAppWebViewController? mainWebViewController;
@@ -9,7 +9,7 @@ class WebViewTabColumn extends StatelessWidget {
   final Function(String) onUrlSubmitted;
   final Widget mainWebView;
 
-  const WebViewTabColumn({
+  const WebViewTabWidget({
     super.key,
     required this.urlController,
     required this.urlFocusNode,

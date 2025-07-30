@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'load_web_archive_page.dart';
+import '../pages/load_web_archive_page.dart';
 
-class ArchiveGrid extends StatelessWidget {
+class ArchiveGridWidget extends StatelessWidget {
   final List<FileSystemEntity> mhtFiles;
-  const ArchiveGrid({super.key, required this.mhtFiles});
+  const ArchiveGridWidget({super.key, required this.mhtFiles});
 
   @override
   Widget build(BuildContext context) {

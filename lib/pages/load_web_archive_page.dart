@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:inapp_webview_test/main.dart' show webViewEnvironment;
 import 'package:url_launcher/url_launcher.dart' show canLaunchUrl, launchUrl;
-import 'package:inapp_webview_test/web_archive_manager.dart';
+import 'package:inapp_webview_test/tools/web_archive_manager.dart';
 
 class LoadWebArchivePage extends StatefulWidget {
   final String archiveFileName;

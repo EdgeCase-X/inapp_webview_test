@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart'
     show InAppLocalhostServer, InAppWebViewController, WebViewEnvironment;
-import 'package:inapp_webview_test/save_load_web_archive.dart' show SaveLoadWebArchive;
+import 'package:inapp_webview_test/pages/main_page.dart' show MainPage;
 
 final localhostServer = InAppLocalhostServer(documentRoot: 'assets');
 WebViewEnvironment? webViewEnvironment;
@@ -22,7 +22,7 @@ class EdgeCasePOC extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'EdgeCaseX POC', home: const SaveLoadWebArchive(),
+      title: 'EdgeCaseX POC', home: const MainPage(),
     );
   }
 }

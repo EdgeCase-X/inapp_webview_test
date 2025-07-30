@@ -6,19 +6,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path_provider/path_provider.dart';
 
-import 'archive_grid.dart';
-import 'main_webview.dart';
-import 'web_archive_manager.dart';
-import 'webview_tab_column.dart';
+import '../widgets/archive_grid_widget.dart';
+import '../widgets/webview_widget.dart';
+import '../tools/web_archive_manager.dart';
+import '../widgets/webview_tab_widget.dart';
 
-class SaveLoadWebArchive extends StatefulWidget {
-  const SaveLoadWebArchive({super.key});
+class MainPage extends StatefulWidget {
+  const MainPage({super.key});
 
   @override
-  State<SaveLoadWebArchive> createState() => _SaveLoadWebArchiveState();
+  State<MainPage> createState() => _MainPageState();
 }
 
-class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
+class _MainPageState extends State<MainPage>
     with SingleTickerProviderStateMixin {
   final GlobalKey mainWebViewKey = GlobalKey();
 
@@ -92,8 +92,7 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
       body: SafeArea(
         child: TabBarView(
           controller: _tabController,
-          children: [_webViewTab(context), _archiveGrid(),
-          ],
+          children: [_webViewTab(context), _archiveGrid()],
         ),
       ),
     );
@@ -107,7 +106,7 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
     ],
   );
 
-  WebViewTabColumn _webViewTab(BuildContext context) => WebViewTabColumn(
+  WebViewTabWidget _webViewTab(BuildContext context) => WebViewTabWidget(
     urlController: urlController,
     urlFocusNode: urlFocusNode,
     mainWebViewController: mainWebViewController,
@@ -146,9 +145,8 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
       }
     },
   );
-  
 
-  Widget _mainWebView() => MainWebView(
+  Widget _mainWebView() => WebViewWidget(
     webViewKey: mainWebViewKey,
     controller: mainWebViewController,
     settings: settings,
@@ -168,8 +166,8 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
     },
   );
 
-  Widget _archiveGrid() => ArchiveGrid(mhtFiles: _mhtFiles);
-  
+  Widget _archiveGrid() => ArchiveGridWidget(mhtFiles: _mhtFiles);
+
   Future<void> _archive(BuildContext context, String fileName) async {
     final success = await WebArchiveManager.saveWebArchive(
       mainWebViewController,
@@ -190,6 +188,4 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
       ).showSnackBar(SnackBar(content: Text('Failed to save archive!')));
     }
   }
-
-  
 }

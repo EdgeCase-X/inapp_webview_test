@@ -4,7 +4,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:inapp_webview_test/main.dart' show webViewEnvironment;
 import 'package:url_launcher/url_launcher.dart';
 
-class MainWebView extends StatelessWidget {
+class WebViewWidget extends StatelessWidget {
   final GlobalKey webViewKey;
   final InAppWebViewController? controller;
   final InAppWebViewSettings settings;
@@ -14,7 +14,7 @@ class MainWebView extends StatelessWidget {
   final void Function(InAppWebViewController) onWebViewCreated;
   final void Function(String) onUrlChanged;
 
-  const MainWebView({
+  const WebViewWidget({
     super.key,
     required this.webViewKey,
     required this.controller,
