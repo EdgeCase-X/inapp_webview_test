@@ -1,27 +1,15 @@
-import 'dart:collection' show UnmodifiableListView;
+import 'dart:io';
 
 import 'package:auto_validate/auto_validate.dart';
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kDebugMode, kIsWeb;
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
-import 'dart:io';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart'
-    show
-        InAppWebView,
-        InAppWebViewController,
-        InAppWebViewSettings,
-        NavigationActionPolicy,
-        PullToRefreshController,
-        PullToRefreshSettings,
-        URLRequest,
-        UserScript,
-        WebUri;
-import 'package:inapp_webview_test/load_web_archive_page.dart'
-    show LoadWebArchivePage;
-import 'package:inapp_webview_test/main.dart' show myDrawer, webViewEnvironment;
-import 'package:inapp_webview_test/web_archive_manager.dart';
-import 'package:url_launcher/url_launcher.dart' show canLaunchUrl, launchUrl;
+
+import 'archive_grid.dart';
+import 'main_webview.dart';
+import 'web_archive_manager.dart';
+import 'webview_tab_column.dart';
 
 class SaveLoadWebArchive extends StatefulWidget {
   const SaveLoadWebArchive({super.key});
@@ -33,10 +21,8 @@ class SaveLoadWebArchive extends StatefulWidget {
 class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
     with SingleTickerProviderStateMixin {
   final GlobalKey mainWebViewKey = GlobalKey();
-  final GlobalKey loadWebViewKey = GlobalKey();
 
   InAppWebViewController? mainWebViewController;
-  InAppWebViewController? loadWebViewController;
   InAppWebViewSettings settings = InAppWebViewSettings(
     isInspectable: kDebugMode,
     mediaPlaybackRequiresUserGesture: false,
@@ -49,13 +35,16 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
 
   PullToRefreshController? pullToRefreshController;
 
+  final FocusNode urlFocusNode = FocusNode();
+  late TabController _tabController;
+
+  final urlController = TextEditingController();
+
+  List<FileSystemEntity> _mhtFiles = [];
+
   String archiveFileName = "";
   String url = "";
   double progress = 0;
-  final urlController = TextEditingController();
-  final FocusNode urlFocusNode = FocusNode();
-  late TabController _tabController;
-  List<FileSystemEntity> _mhtFiles = [];
 
   @override
   void initState() {
@@ -64,28 +53,16 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       urlFocusNode.requestFocus();
     });
-    pullToRefreshController =
-        kIsWeb ||
-                ![
-                  TargetPlatform.iOS,
-                  TargetPlatform.android,
-                ].contains(defaultTargetPlatform)
-            ? null
-            : PullToRefreshController(
-              settings: PullToRefreshSettings(color: Colors.blue),
-              onRefresh: () async {
-                if (defaultTargetPlatform == TargetPlatform.android) {
-                  mainWebViewController?.reload();
-                } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-                  mainWebViewController?.loadUrl(
-                    urlRequest: URLRequest(
-                      url: await mainWebViewController?.getUrl(),
-                    ),
-                  );
-                }
-              },
-            );
+
+    pullToRefreshController = PullToRefreshController(
+      settings: PullToRefreshSettings(color: Colors.blue),
+      onRefresh: () async {
+        await mainWebViewController?.reload();
+      },
+    );
+
     _tabController = TabController(length: 2, vsync: this);
+
     _loadMhtFiles();
   }
 
@@ -94,9 +71,8 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
     if (dir != null) {
       final files =
           dir.listSync().where((f) => f.path.endsWith('.mht')).toList();
-      setState(() {
-        _mhtFiles = files;
-      });
+
+      setState(() => _mhtFiles = files);
     }
   }
 
@@ -110,170 +86,90 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("InAppBrowser"),
-        bottom: TabBar(
+        title: Text("EdgeCaseX POC"),
+        bottom: _tabBarMenu(context),
+      ),
+      body: SafeArea(
+        child: TabBarView(
           controller: _tabController,
-          tabs: [
-            Tab(icon: Icon(Icons.web), text: 'WebView'),
-            Tab(icon: Icon(Icons.grid_view), text: 'Archives'),
+          children: [_webViewTab(context), _archiveGrid(),
           ],
         ),
-      ),
-      drawer: myDrawer(context: context),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // WebView tab
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-            TextField(
-              decoration: InputDecoration(prefixIcon: Icon(Icons.search)),
-              controller: urlController,
-              focusNode: urlFocusNode,
-              keyboardType: TextInputType.url,
-              onSubmitted: (value) async {
-                if (value.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Please enter a URL or search query'),
-                    ),
-                  );
-                  return;
-                }
-
-                // Regex: starts with http://, https://, or www.
-                final urlPattern = RegExp(
-                  r'^(https?://|www\.)',
-                  caseSensitive: false,
-                );
-                final revisedUrl =
-                    urlPattern.hasMatch(value) ? value : 'http://www.$value';
-                final isValidURL = revisedUrl.isValidURL;
-
-                setState(() {
-                  this.url =
-                      isValidURL
-                          ? revisedUrl
-                          : 'https://www.google.com/search?q=$value';
-                  urlController.text = this.url;
-                });
-
-                final urlForRequest = WebUri(url);
-                await mainWebViewController?.loadUrl(
-                  urlRequest: URLRequest(url: urlForRequest),
-                );
-
-                if (isValidURL) {
-                  archiveFileName =
-                      '${urlForRequest.host}_${DateTime.now().millisecondsSinceEpoch}_archive.mht';
-                  // Archive the web page
-                  await _archive(context, archiveFileName);
-                }
-              },
-            ),
-            mainWebView(),
-            // Expanded(
-            //   flex: 0,
-            //   child: Row(
-            //     mainAxisAlignment: MainAxisAlignment.center,
-            //     children: [
-            //       ElevatedButton(
-            //         onPressed: () async {
-            //           final success = await WebArchiveManager.saveWebArchive(
-            //             saveWebViewController,
-            //             archiveFileName,
-            //           );
-            //           if (success) {
-            //             print("WebView archived to: $archiveFileName");
-            //             ScaffoldMessenger.of(context).showSnackBar(
-            //               SnackBar(content: Text('Archive saved!')),
-            //             );
-            //           } else {
-            //             print("ERROR: Error archiving WebView.");
-            //             ScaffoldMessenger.of(context).showSnackBar(
-            //               SnackBar(content: Text('Failed to save archive!')),
-            //             );
-            //           }
-            //         },
-            //         child: Text("Archive"),
-            //       ),
-            //       SizedBox(width: 10),
-            //       ElevatedButton(
-            //         onPressed: () async {
-            //           final success = await WebArchiveManager.loadWebArchive(
-            //             loadWebViewController,
-            //             archiveFileName,
-            //           );
-            //           if (success) {
-            //             print("Loaded archive from: $archiveFileName");
-            //             ScaffoldMessenger.of(context).showSnackBar(
-            //               SnackBar(content: Text('Archive loaded!')),
-            //             );
-            //           } else {
-            //             print("ERROR: Could not load archive.");
-            //             ScaffoldMessenger.of(context).showSnackBar(
-            //               SnackBar(content: Text('Failed to load archive!')),
-            //             );
-            //           }
-            //         },
-            //         child: Text("Load archive"),
-            //       ),
-            //     ],
-            //   ),
-            // ),
-            // loadWebView(),
-          ],
-        ),
-      ),
-          // Archives tab
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child:
-                _mhtFiles.isEmpty
-                    ? Center(child: Text('No archives found.'))
-                    : GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        childAspectRatio: 3,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                      ),
-                      itemCount: _mhtFiles.length,
-                      itemBuilder: (context, index) {
-                        final file = _mhtFiles[index];
-                        final fileName =
-                            file.path.split(Platform.pathSeparator).last;
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => LoadWebArchivePage(
-                                      archiveFileName: fileName,
-                                    ),
-                              ),
-                            );
-                          },
-                          child: Card(
-                            child: Center(
-                              child: Text(
-                                fileName,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 14),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-          ),
-        ],
       ),
     );
   }
 
+  TabBar _tabBarMenu(BuildContext context) => TabBar(
+    controller: _tabController,
+    tabs: [
+      Tab(icon: Icon(Icons.web), text: 'Navigate'),
+      Tab(icon: Icon(Icons.grid_view), text: 'Archives'),
+    ],
+  );
+
+  WebViewTabColumn _webViewTab(BuildContext context) => WebViewTabColumn(
+    urlController: urlController,
+    urlFocusNode: urlFocusNode,
+    mainWebViewController: mainWebViewController,
+    progress: progress,
+    mainWebView: _mainWebView(),
+    onUrlSubmitted: (value) async {
+      if (value.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please enter a URL or search query')),
+        );
+        return;
+      }
+
+      // Regex: starts with http://, https://, or www.
+      final urlPattern = RegExp(r'^(https?://|www\.)', caseSensitive: false);
+      final revisedUrl =
+          urlPattern.hasMatch(value) ? value : 'https://www.$value';
+      final isValidURL = revisedUrl.isValidURL;
+
+      setState(() {
+        this.url =
+            isValidURL ? revisedUrl : 'https://www.google.com/search?q=$value';
+        urlController.text = this.url;
+      });
+
+      final urlForRequest = WebUri(url);
+      await mainWebViewController?.loadUrl(
+        urlRequest: URLRequest(url: urlForRequest),
+      );
+
+      if (isValidURL) {
+        archiveFileName =
+            '${urlForRequest.host}_${DateTime.now().millisecondsSinceEpoch}_archive.mht';
+        // Archive the web page
+        await _archive(context, archiveFileName);
+      }
+    },
+  );
+  
+
+  Widget _mainWebView() => MainWebView(
+    webViewKey: mainWebViewKey,
+    controller: mainWebViewController,
+    settings: settings,
+    pullToRefreshController: pullToRefreshController,
+    progress: progress,
+    urlController: urlController,
+    onWebViewCreated: (controller) {
+      setState(() {
+        mainWebViewController = controller;
+      });
+    },
+    onUrlChanged: (newUrl) {
+      setState(() {
+        url = newUrl;
+        urlController.text = newUrl;
+      });
+    },
+  );
+
+  Widget _archiveGrid() => ArchiveGrid(mhtFiles: _mhtFiles);
+  
   Future<void> _archive(BuildContext context, String fileName) async {
     final success = await WebArchiveManager.saveWebArchive(
       mainWebViewController,
@@ -295,148 +191,5 @@ class _SaveLoadWebArchiveState extends State<SaveLoadWebArchive>
     }
   }
 
-  Widget mainWebView() => Expanded(
-    child: Stack(
-      children: [
-        InAppWebView(
-          key: mainWebViewKey,
-          webViewEnvironment: webViewEnvironment,
-          // initialUrlRequest: URLRequest(url: WebUri('https://flutter.dev')),
-          initialUserScripts: UnmodifiableListView<UserScript>([]),
-          initialSettings: settings,
-          pullToRefreshController: pullToRefreshController,
-          onWebViewCreated: (controller) async {
-            mainWebViewController = controller;
-          },
-          onLoadStart: (controller, url) {
-            setState(() {
-              this.url = url.toString();
-              urlController.text = this.url;
-            });
-          },
-          shouldOverrideUrlLoading: (controller, navigationAction) async {
-            var uri = navigationAction.request.url!;
-
-            if (![
-              "http",
-              "https",
-              "file",
-              "chrome",
-              "data",
-              "javascript",
-              "about",
-            ].contains(uri.scheme)) {
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri);
-                return NavigationActionPolicy.CANCEL;
-              }
-            }
-
-            return NavigationActionPolicy.ALLOW;
-          },
-          onLoadStop: (controller, url) {
-            pullToRefreshController?.endRefreshing();
-            setState(() {
-              this.url = url.toString();
-              urlController.text = this.url;
-            });
-          },
-          onReceivedError: (controller, request, error) {
-            pullToRefreshController?.endRefreshing();
-          },
-          onProgressChanged: (controller, progress) {
-            if (progress == 100) {
-              pullToRefreshController?.endRefreshing();
-            }
-            setState(() {
-              this.progress = progress / 100;
-              urlController.text = url;
-            });
-          },
-          onUpdateVisitedHistory: (controller, url, isReload) {
-            setState(() {
-              this.url = url.toString();
-              urlController.text = this.url;
-            });
-          },
-          onConsoleMessage: (controller, consoleMessage) {
-            print(consoleMessage);
-          },
-        ),
-        progress < 1.0 ? LinearProgressIndicator(value: progress) : Container(),
-      ],
-    ),
-  );
-
-  Widget loadWebView() => Expanded(
-    child: Stack(
-      children: [
-        InAppWebView(
-          key: loadWebViewKey,
-          webViewEnvironment: webViewEnvironment,
-          initialUserScripts: UnmodifiableListView<UserScript>([]),
-          initialSettings: settings,
-          pullToRefreshController: pullToRefreshController,
-          onWebViewCreated: (controller) async {
-            loadWebViewController = controller;
-          },
-          onLoadStart: (controller, url) {
-            setState(() {
-              this.url = url.toString();
-              urlController.text = this.url;
-            });
-          },
-          shouldOverrideUrlLoading: (controller, navigationAction) async {
-            var uri = navigationAction.request.url!;
-
-            if (![
-              "http",
-              "https",
-              "file",
-              "chrome",
-              "data",
-              "javascript",
-              "about",
-            ].contains(uri.scheme)) {
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri);
-                return NavigationActionPolicy.CANCEL;
-              }
-            }
-
-            return NavigationActionPolicy.ALLOW;
-          },
-          onLoadStop: (controller, url) {
-            pullToRefreshController?.endRefreshing();
-            setState(() {
-              this.url = url.toString();
-              urlController.text = this.url;
-            });
-          },
-          onReceivedError: (controller, request, error) {
-            pullToRefreshController?.endRefreshing();
-          },
-          onProgressChanged: (controller, progress) {
-            if (progress == 100) {
-              pullToRefreshController?.endRefreshing();
-            }
-            setState(() {
-              this.progress = progress / 100;
-              urlController.text = url;
-            });
-          },
-          onUpdateVisitedHistory: (controller, url, isReload) {
-            setState(() {
-              this.url = url.toString();
-              urlController.text = this.url;
-            });
-          },
-          onConsoleMessage: (controller, consoleMessage) {
-            print(consoleMessage);
-          },
-        ),
-        progress < 1.0 ? LinearProgressIndicator(value: progress) : Container(),
-      ],
-    ),
-  );
+  
 }
