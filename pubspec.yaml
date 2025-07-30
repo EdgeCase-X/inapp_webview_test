@@ -40,6 +40,7 @@ dependencies:
   path_provider: ^2.1.5
   auto_validate: ^3.0.8
   logger: ^2.6.1
+  fluttertoast: ^8.2.12
 
 dev_dependencies:
   flutter_test:
