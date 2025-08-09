@@ -116,9 +116,13 @@ class _MainPageState extends State<MainPage>
     mainWebView: _mainWebView(),
     onUrlSubmitted: (value) async {
       if (value.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Please enter a URL or search query')),
+        Fluttertoast.showToast(
+          msg: 'Please enter a URL or search query',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
         );
+        urlFocusNode.requestFocus();
+        
         return;
       }
 
@@ -143,8 +147,11 @@ class _MainPageState extends State<MainPage>
         archiveFileName =
             '${urlForRequest.host}_${DateTime.now().millisecondsSinceEpoch}_archive.mht';
         // Archive the web page
-        await _archive(context, archiveFileName);
+        await _archive(archiveFileName);
       }
+    },
+    onArchiveCreated: () async {
+      
     },
   );
 
@@ -170,7 +177,7 @@ class _MainPageState extends State<MainPage>
 
   Widget _archiveGrid() => ArchiveGridWidget(mhtFiles: _mhtFiles);
 
-  Future<void> _archive(BuildContext context, String fileName) async {
+  Future<void> _archive(String fileName) async {
     final success = await WebArchiveManager.saveWebArchive(
       mainWebViewController,
       fileName,

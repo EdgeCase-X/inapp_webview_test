@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
+
 class WebViewTabWidget extends StatelessWidget {
   final TextEditingController urlController;
   final FocusNode urlFocusNode;
   final InAppWebViewController? mainWebViewController;
   final double progress;
   final Function(String) onUrlSubmitted;
+  final VoidCallback onArchiveCreated;
   final Widget mainWebView;
 
   const WebViewTabWidget({
@@ -16,6 +18,7 @@ class WebViewTabWidget extends StatelessWidget {
     required this.mainWebViewController,
     required this.progress,
     required this.onUrlSubmitted,
+    required this.onArchiveCreated,
     required this.mainWebView,
   });
 
@@ -29,7 +32,10 @@ class WebViewTabWidget extends StatelessWidget {
           controller: urlController,
           focusNode: urlFocusNode,
           keyboardType: TextInputType.url,
-          onSubmitted: onUrlSubmitted,
+          onSubmitted: (value) async {
+            await onUrlSubmitted(value);
+            onArchiveCreated();
+          },
         ),
         mainWebView,
         OverflowBar(
